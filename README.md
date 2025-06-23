@@ -48,8 +48,6 @@ Install dependencies:
 pip install pygame pytmx numpy
 ```
 
-(Apple Silicon users may need --pre when installing Pygame if the latest stable wheel is unavailable.)
-
 ## Running the Game
 
 ```bash
