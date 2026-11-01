@@ -15,6 +15,7 @@ Loading {{cookiecutter.title}} from {{cookiecutter.archive}}.apk
 """)
 
 import sys
+import os
 import platform
 import json
 from pathlib import Path
@@ -147,6 +148,8 @@ async def custom_site():
     # but do not run main.py yet.
 
     assets = appdir / "assets"
+    sys.path.insert(0, assets.as_posix())
+    os.chdir(assets.as_posix())
 
 
     # we need to fill __file__ that is not yet set
@@ -164,15 +167,9 @@ async def custom_site():
 
     # get all modules from guesswork or pep0722/0723
 
-    # preloading will change directory to assets dir and prepare imports.
-    with open(__file__,"r") as source:
-        await shell.preload_code(source.read(), loaderhome=appdir / "assets", hint=__file__)
-
-
-    # Do not scan every file in the mounted archive on iOS. That broad
-    # desktop-oriented pass pulls in unrelated optional packages and can
-    # leave Safari on a blank screen indefinitely. The actual imports below
-    # compile/load the dependencies used by this game on demand.
+    # Do not run the template's broad preload pass on iOS. It can stall Safari
+    # before the application module is imported. The game dependencies are
+    # loaded by the normal Python import path below.
 
     print("mobile.tmpl: top level")
 
