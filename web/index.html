@@ -202,16 +202,7 @@ async def custom_site():
     import main as game_main
 
     # Importing main as a module does not execute its __main__ block.
-    async def run_game():
-        try:
-            await game_main.game_loop()
-        except Exception as exc:
-            platform.window.transfer.hidden = False
-            platform.document.getElementById("status").innerText = f"Pygame error: {exc}"
-            platform.document.getElementById("status").style.color = "white"
-            print(f"Pygame error: {exc!r}")
-
-    asyncio.create_task(run_game())
+    await game_main.game_loop()
 
     for k,v in vars(game_main).items():
         if not k.startswith('_'):
