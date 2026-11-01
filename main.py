@@ -487,11 +487,12 @@ async def main(path_gid, active_tile_data):
                         requested_direction = MAP_DIR_RIGHT
                     elif event.key == pygame.K_UP or event.key == pygame.K_w:
                         requested_direction = MAP_DIR_UP
+                    elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                        requested_direction = MAP_DIR_DOWN
                     if requested_direction is not None and requested_direction != player_direction:
                         player_direction = requested_direction
                         if sound_enabled:
                             turn_sfx.play()
-                    # backwards functionality: elif event.key == pygame.K_DOWN or event.key == pygame.K_s: requested_direction = MAP_DIR_DOWN
                     if requested_direction is not None and requested_direction != player_direction:
                         # Prevent 180 turns:
                         # is_reverse = (requested_direction[0] == -player_direction[0] and
