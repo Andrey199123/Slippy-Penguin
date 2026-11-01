@@ -137,31 +137,10 @@ def pitch_shift(sound: pygame.mixer.Sound, semitones: float) -> pygame.mixer.Sou
     """
     Shifts the milestone.wav file higher in pitch the higher the score.
     """
-    if semitones == 0:
-        return sound
-    import numpy as np
-    arr = pygame.sndarray.array(sound)
-    orig_dtype = arr.dtype
-    factor = 2 ** (semitones / 12.0)
-    n_samples = arr.shape[0]
-    new_len = max(1, int(n_samples / factor))
-    old_idx = np.arange(n_samples, dtype=np.float32)
-    new_idx = np.linspace(0, n_samples - 1, new_len, dtype=np.float32)
-    if arr.ndim == 1:
-        resampled = np.interp(new_idx, old_idx, arr).astype(np.float32)
-    else:
-        channels = []
-        for ch in range(arr.shape[1]):
-            channels.append(
-                np.interp(new_idx, old_idx, arr[:, ch]).astype(np.float32)
-            )
-        resampled = np.stack(channels, axis=1)
-    if np.issubdtype(orig_dtype, np.integer):
-        limits = np.iinfo(orig_dtype)
-        resampled = np.clip(resampled, limits.min, limits.max).astype(orig_dtype)
-    else:
-        resampled = resampled.astype(orig_dtype)
-    return pygame.sndarray.make_sound(resampled.copy())
+    # Keep the browser bundle free of NumPy. Sound is disabled there when the
+    # browser has not unlocked audio, and the unshifted cue remains valid on
+    # desktop as a lightweight fallback.
+    return sound
 
 
 def format_csv(grid_data, width):
