@@ -193,6 +193,38 @@ function show_infobox() {
     }, { passive: true });
 })();
 
+// Convert iOS/trackpad swipes into the same arrow-key events used by desktop.
+(function enableSwipeControls() {
+    let startX = 0;
+    let startY = 0;
+    const threshold = 28;
+    const target = document.getElementById("canvas") || document;
+    const sendKey = (key) => {
+        window.dispatchEvent(new KeyboardEvent("keydown", {
+            key,
+            code: key,
+            bubbles: true,
+            cancelable: true
+        }));
+    };
+    target.addEventListener("touchstart", (event) => {
+        const touch = event.changedTouches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+    }, { passive: true });
+    target.addEventListener("touchend", (event) => {
+        const touch = event.changedTouches[0];
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            sendKey(dx > 0 ? "ArrowRight" : "ArrowLeft");
+        } else {
+            sendKey(dy > 0 ? "ArrowDown" : "ArrowUp");
+        }
+    }, { passive: true });
+})();
+
 </script>
 
     <title>slippy-penguin</title>
@@ -232,6 +264,21 @@ function show_infobox() {
             font-family: system-ui, sans-serif;
  /*           display: none; */
             z-index: 999999;
+        }
+        #github-link {
+            position: fixed;
+            left: 50%;
+            bottom: 10px;
+            transform: translateX(-50%);
+            z-index: 20;
+            color: rgba(255, 255, 255, 0.72);
+            font: 14px system-ui, sans-serif;
+            text-decoration: none;
+        }
+        #github-link:hover,
+        #github-link:focus-visible {
+            color: #ffffff;
+            text-decoration: underline;
         }
         div.emscripten { text-align: center; }
         div.emscripten_border { border: 1px solid black; }
@@ -329,6 +376,9 @@ width="1200px"
 height="800px"
     oncontextmenu="event.preventDefault()" tabindex=1 hidden>
     </canvas>
+
+    <a id="github-link" href="https://github.com/Andrey199123/Slippy-Penguin"
+       target="_blank" rel="noopener noreferrer">View the source on GitHub</a>
 
     <div id="infobox">Loading, please wait ...</div>
 
