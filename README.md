@@ -5,6 +5,12 @@ Slide across procedurally generated ice, dodge water gaps, and push your high sc
 
 ---
 
+## Screenshots
+
+![Slippy Penguin gameplay](screenshots/gameplay.png)
+
+![Slippy Penguin game over screen](screenshots/game-over.png)
+
 ## Features
 
 | Category  | Details |
