@@ -8,6 +8,7 @@ import math
 import itertools
 import pygame.mixer
 import numpy as np
+import asyncio
 
 # CONSTANTS
 OUTPUT_TMX_FILE = 'assets/map.tmx'
@@ -394,17 +395,23 @@ def draw_text(surface, text, size, x, y, color, align="center"):
         surface.blit(text_surface, text_rect)
 
 
-def main(path_gid, active_tile_data):
+async def main(path_gid, active_tile_data):
     global lose_sound_already_played
 
     # SOUND INITIALIZATION
-    pygame.mixer.init()
-    ambient_wind = pygame.mixer.Sound("assets/wind.wav")
-    turn_sfx = pygame.mixer.Sound("assets/turn.mp3")
-    lose_sfx = pygame.mixer.Sound("assets/lose.mp3")
-    milestone_raw = pygame.mixer.Sound("assets/milestone.wav")
-    ambient_wind.set_volume(0.30)
-    ambient_wind.play(loops=-1)
+    sound_enabled = True
+    try:
+        pygame.mixer.init()
+        ambient_wind = pygame.mixer.Sound("assets/wind.ogg")
+        turn_sfx = pygame.mixer.Sound("assets/turn.ogg")
+        lose_sfx = pygame.mixer.Sound("assets/lose.ogg")
+        milestone_raw = pygame.mixer.Sound("assets/milestone.ogg")
+        ambient_wind.set_volume(0.30)
+        ambient_wind.play(loops=-1)
+    except pygame.error:
+        # Audio can be unavailable until browser interaction enables it.
+        sound_enabled = False
+        ambient_wind = turn_sfx = lose_sfx = milestone_raw = None
 
     milestone_count = 0
     pygame.init()
@@ -483,7 +490,8 @@ def main(path_gid, active_tile_data):
                         requested_direction = MAP_DIR_UP
                     if requested_direction is not None and requested_direction != player_direction:
                         player_direction = requested_direction
-                        turn_sfx.play()
+                        if sound_enabled:
+                            turn_sfx.play()
                     # backwards functionality: elif event.key == pygame.K_DOWN or event.key == pygame.K_s: requested_direction = MAP_DIR_DOWN
                     if requested_direction is not None and requested_direction != player_direction:
                         # Prevent 180 turns:
@@ -496,8 +504,9 @@ def main(path_gid, active_tile_data):
                 new_count = score // 25
                 if new_count > milestone_count:
                     milestone_count = new_count
-                    pitch_up = pitch_shift(milestone_raw, semitones=milestone_count)
-                    pitch_up.play()
+                    if sound_enabled:
+                        pitch_up = pitch_shift(milestone_raw, semitones=milestone_count)
+                        pitch_up.play()
             time_elapsed_seconds += dt
             current_speed = min(MAX_SPEED_TILES_PER_SEC,
                                 INITIAL_SPEED_TILES_PER_SEC + time_elapsed_seconds * ACCELERATION_TILES_PER_SEC2)
@@ -603,8 +612,9 @@ def main(path_gid, active_tile_data):
 
         # GAME OVER SCREEN
         if game_state == "game_over":
-            ambient_wind.fadeout(700)
-            if not lose_sound_already_played:
+            if sound_enabled:
+                ambient_wind.fadeout(700)
+            if sound_enabled and not lose_sound_already_played:
                 lose_sfx.play()
                 lose_sound_already_played = True
             overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)  # Transparent
@@ -629,16 +639,20 @@ def main(path_gid, active_tile_data):
             draw_text(screen, "Press ESC to Exit", RESTART_FONT_SIZE // 2, SCREEN_WIDTH // 2,
                       SCREEN_HEIGHT // 2 + 140 + game_over_y_offset, FONT_COLOR, align="center")
         pygame.display.flip()
+        # Yield to the browser event loop when running through Pygbag.
+        await asyncio.sleep(0)
     pygame.font.quit()
     return False
 
 
-if __name__ == "__main__":
-    required_files = [TILESET_SOURCE, BG_IMAGE_FILE, PENGUIN_IMG_FORWARD, PENGUIN_IMG_LEFT, PENGUIN_IMG_RIGHT]
+async def game_loop():
     while True:
         success, path_gid_result, active_tile_data_result = generate_and_save_tmx()
-        should_restart = main(path_gid_result, active_tile_data_result)
+        should_restart = await main(path_gid_result, active_tile_data_result)
         if not should_restart:
             break
     pygame.quit()
-    sys.exit()
+
+
+if __name__ == "__main__":
+    asyncio.run(game_loop())

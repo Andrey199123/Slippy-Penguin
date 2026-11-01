@@ -56,6 +56,15 @@ pip install pygame pytmx numpy
 python main.py
 ```
 
+## Play in the browser
+
+The game can also be packaged for the browser with Pygbag. The Vercel build uses the same command and publishes the generated WebAssembly app.
+
+```bash
+python3 -m pip install pygbag
+python3 -m pygbag --build .
+```
+
 ## Controls
 
 | Key | Action |
