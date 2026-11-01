@@ -503,16 +503,39 @@ async def main(path_gid, active_tile_data):
                         ax, ay = map_to_screen_anchor(x, y, z)
                         render_tiles.append(((x + y, z), ax, ay, image))
     render_tiles.sort(key=lambda tile: tile[0])
+    @lru_cache(maxsize=24)
+    def terrain_chunk(chunk_x, chunk_y):
+        # Paint the static terrain once per region. Clip each tile into the
+        # region in its original depth order, preserving overlaps at edges.
+        chunk = pygame.Surface((512, 512), pygame.SRCALPHA).convert_alpha()
+        bounds = pygame.Rect(chunk_x * 512, chunk_y * 512, 512, 512)
+        draws = []
+        for _, ax, ay, image in render_tiles:
+            x, y = int(ax - TILE_WIDTH_PX / 2), int(ay - TILE_HEIGHT_PX)
+            if bounds.colliderect(pygame.Rect(x, y, *image.get_size())):
+                draws.append((image, (x - bounds.x, y - bounds.y)))
+        chunk.blits(draws, doreturn=False)
+        return chunk
     tile_rows = {}
     for tile in render_tiles:
         tile_rows.setdefault(int(tile[2] // 128), []).append(tile)
     touch_start = None
+    frame_count = 0
+    frame_time = 0.0
     running = True
     while running:
         dt = min(clock.tick(0 if sys.platform == 'emscripten' else FPS) / 1000.0, 0.05)
         if dt == 0:
             await asyncio.sleep(0)
             continue
+        frame_count += 1
+        frame_time += clock.get_time() / 1000.0
+        if frame_time >= 1.0:
+            if sys.platform == 'emscripten':
+                import platform
+                platform.window.slippyFPS = frame_count / frame_time
+            frame_count = 0
+            frame_time = 0.0
         for event in pygame.event.get():
             if event.type == pygame.FINGERDOWN:
                 touch_start = (event.x, event.y)
@@ -628,9 +651,14 @@ async def main(path_gid, active_tile_data):
         screen_rect = screen.get_rect()
         cull_buffer = max(TILE_WIDTH_PX, TILE_HEIGHT_PX) * 1.5
         visible_screen_rect_cull = screen_rect.inflate(cull_buffer, cull_buffer)
+        chunk_blits = []
+        for cy in range(int(camera_y // 512), int((camera_y + SCREEN_HEIGHT) // 512) + 1):
+            for cx in range(int(camera_x // 512), int((camera_x + SCREEN_WIDTH) // 512) + 1):
+                chunk_blits.append((terrain_chunk(cx, cy), (cx * 512 - int(camera_x), cy * 512 - int(camera_y))))
+        screen.blits(chunk_blits, doreturn=False)
         visible_tiles = []
         for row in range(int((camera_y - cull_buffer) // 128), int((camera_y + SCREEN_HEIGHT + cull_buffer) // 128) + 1):
-            visible_tiles.extend(tile_rows.get(row, ()))
+            pass  # Terrain is rendered from cached chunks above.
         visible_tiles.sort(key=lambda tile: tile[0])
         tile_blits = []
         for _, anchor_x_raw, anchor_y_raw, image in visible_tiles:
