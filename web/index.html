@@ -1,4 +1,9 @@
-<html lang="en-us"><script src="https://pygame-web.github.io/cdn/0.9.4/pythons.js" type=module id="site" data-python="python3.13" data-LINES=42 data-COLUMNS=132 data-os="vtx,fs,snd,gui,fbdev" async defer>#<!--
+<html lang="en-us"><script>
+    // Set this before Pygbag's module starts so Safari cannot be misclassified
+    // by the Python browser proxy (especially iPadOS desktop-mode user agents).
+    window.__slippyIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+</script><script src="https://pygame-web.github.io/cdn/0.9.4/pythons.js" type=module id="site" data-python="python3.13" data-LINES=42 data-COLUMNS=132 data-os="vtx,fs,snd,gui,fbdev" async defer>#<!--
 
 print("""
 Loading slippy-penguin from slippy-penguin.apk
@@ -46,16 +51,9 @@ async def custom_site():
 
     apk = "slippy-penguin.apk"
     try:
-        navigator = platform.window.navigator
-        user_agent = str(navigator.userAgent).lower()
-        touch_points = int(navigator.maxTouchPoints or 0)
+        ios_device = bool(platform.window.__slippyIOS)
     except Exception:
-        user_agent = ""
-        touch_points = 0
-    ios_device = (
-        "iphone" in user_agent or "ipad" in user_agent or "ipod" in user_agent
-        or ("macintosh" in user_agent and touch_points > 1)
-    )
+        ios_device = False
 
     if ios_device:
         await aio.fetch.preload(chdir=False, isolated=True)
