@@ -314,7 +314,7 @@ height="800px"
 
     <div id="infobox">Loading, please wait ...</div>
     <div id="loading-meter" style="position:fixed;top:58%;left:15%;width:70%;z-index:999999;color:white;text-align:center;font:14px Arial">
-      <progress id="game-load-progress" style="width:100%;height:12px;accent-color:white"></progress>
+      <progress id="game-load-progress" value="0" max="100" style="width:100%;height:12px;accent-color:white"></progress>
       <div id="game-load-label" style="margin-top:12px">Starting Python and Pygame…</div>
     </div>
     <script>
@@ -327,7 +327,9 @@ height="800px"
         const response = await originalFetch(input, init);
         const url = typeof input === 'string' ? input : input.url;
         if (!/slippy-penguin\.(tar\.gz|apk)(\?|$)/.test(url || '') || !response.ok || !response.body) return response;
-        const total = Number(response.headers.get('content-length'));
+        // Use the decoded archive size: CDN compression can omit or alter
+        // Content-Length, while the response stream reports decoded bytes.
+        const total = /\.tar\.gz(\?|$)/.test(url) ? 12210733 : 12233431;
         const reader = response.body.getReader();
         let received = 0;
         label.textContent = 'Downloading game assets…';
@@ -337,18 +339,13 @@ height="800px"
               const {done, value} = await reader.read();
               if (done) {
                 controller.close();
-                bar.removeAttribute('value');
+                bar.max = total; bar.value = total;
                 label.textContent = 'Preparing game assets and starting Pygame…';
                 return;
               }
               received += value.byteLength;
-              if (total > 0 && received <= total) {
-                bar.max = total; bar.value = received;
-                label.textContent = `Downloading game assets: ${Math.round(received / total * 100)}%`;
-              } else {
-                bar.removeAttribute('value');
-                label.textContent = `Downloading game assets: ${(received / 1048576).toFixed(1)} MB`;
-              }
+              bar.max = total; bar.value = Math.min(received, total);
+              label.textContent = `Downloading game assets: ${Math.min(100, Math.round(received / total * 100))}%`;
               controller.enqueue(value);
             } catch (error) {
               label.textContent = 'Download failed. Reload to retry.';
