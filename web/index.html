@@ -169,9 +169,10 @@ async def custom_site():
 
     # get all modules from guesswork or pep0722/0723
 
-    # Do not run the template's broad preload pass on iOS. It can stall Safari
-    # before the application module is imported. The game dependencies are
-    # loaded by the normal Python import path below.
+    # Prepare the mounted Python modules before importing the game. Pygbag's
+    # loader needs this step for pygame and the bundled pytmx package.
+    with open(__file__, "r") as source:
+        await shell.preload_code(source.read(), loaderhome=appdir / "assets", hint=__file__)
 
     print("mobile.tmpl: top level")
 
