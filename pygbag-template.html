@@ -55,9 +55,6 @@ async def custom_site():
         ios_device = bool(platform.window.__slippyIOS)
     except Exception:
         ios_device = False
-    # The mobile build is also safe for desktop browsers and avoids relying
-    # on Safari exposing a consistent user-agent through the Python proxy.
-    ios_device = True
 
     if ios_device:
         # This is the official Pygbag mobile startup order. Safari needs the
