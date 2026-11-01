@@ -36,36 +36,43 @@ async def custom_site():
     appdir.mkdir()
 
 
-    # Mount the APK through Pygbag's browser filesystem layer. This is slower
-    # to initialize than local extraction, but is required by iOS Safari.
     apk = "{{cookiecutter.archive}}.apk"
-    cfg = {
-        "io": "url",
-        "type": "mount",
-        "mount": {
-            "point": appdir.as_posix(),
-            "path": "/",
-        },
-    }
-    track = platform.window.MM.prepare(apk, json.dumps(cfg))
-    # Pygbag's mobile mount tracker exposes completion through `avail`.
-    # `ready` is not populated in Safari or in desktop browsers, which leaves
-    # the loading screen running forever after the APK has downloaded.
-    while not track.avail:
-        if track.pos < 0:
-            raise IOError(404)
-        await asyncio.sleep(.1)
-    print("mobile mount complete", track.pos, track.len)
+    user_agent = str(platform.window.navigator.userAgent).lower()
+    try:
+        touch_points = int(platform.window.navigator.maxTouchPoints or 0)
+    except Exception:
+        touch_points = 0
+    ios_device = (
+        "iphone" in user_agent or "ipad" in user_agent or "ipod" in user_agent
+        or ("macintosh" in user_agent and touch_points > 1)
+    )
+
+    if ios_device:
+        # iOS Safari cannot use the synchronous archive extraction path.
+        cfg = {
+            "io": "url",
+            "type": "mount",
+            "mount": {"point": appdir.as_posix(), "path": "/"},
+        }
+        track = platform.window.MM.prepare(apk, json.dumps(cfg))
+        while not track.avail:
+            if track.pos < 0:
+                raise IOError(404)
+            await asyncio.sleep(.1)
+    else:
+        # Desktop browsers are more reliable with the local archive path.
+        import zipfile
+        async with platform.fopen(apk, "rb") as archive:
+            with zipfile.ZipFile(archive) as zip_ref:
+                zip_ref.extractall(appdir.as_posix())
 
     # preloader will change to work dir and prepend it to sys.path
     platform.run_main(PyConfig, loaderhome= appdir / "assets", loadermain=None)
-    print("python preload started")
 
 
     # wait preloading complete : that includes images and wasm compilation of bundled modules
     while embed.counter()<0:
         await asyncio.sleep(.1)
-    print("python preload complete")
 
     main = appdir / "assets" / "main.py"
 
