@@ -62,7 +62,7 @@ The game can also be packaged for the browser with Pygbag. The Vercel build uses
 
 ```bash
 python3 -m pip install pygbag
-python3 -m pygbag --build .
+python3 -m pygbag --build --template pygbag-template.html --width 1200 --height 800 .
 ```
 
 ## Controls

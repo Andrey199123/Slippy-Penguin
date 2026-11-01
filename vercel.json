@@ -1,5 +1,5 @@
 {
-  "buildCommand": "python3 -m pip install pygbag && python3 -m pygbag --build .",
+  "buildCommand": "python3 -m pip install pygbag && python3 -m pygbag --build --template pygbag-template.html --width 1200 --height 800 .",
   "outputDirectory": "build/web",
   "framework": null
 }
