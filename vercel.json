@@ -1,5 +1,5 @@
 {
-  "buildCommand": "python3 -m pip install --break-system-packages pygbag && python3 -m pygbag --build --template pygbag-template.html --width 1200 --height 800 . && mv build/web/slippy-penguin.tar.gz build/web/slippy-penguin.bin",
+  "buildCommand": "python3 -m pip install --break-system-packages pygbag && python3 -m pygbag --build --template pygbag-template.html --width 1200 --height 800 . && mv build/web/slippy-penguin.apk build/web/slippy-penguin.bin",
   "outputDirectory": "build/web",
   "framework": null
 }
