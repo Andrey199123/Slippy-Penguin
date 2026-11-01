@@ -11,7 +11,8 @@ import numpy as np
 
 # CONSTANTS
 OUTPUT_TMX_FILE = 'assets/map.tmx'
-TILESET_SOURCE = 'assets/graphics.tsx'
+# The tileset path is resolved relative to assets/map.tmx
+TILESET_SOURCE = 'graphics.tsx'
 ACTIVE_MAP_WIDTH_TILES = 11
 ACTIVE_MAP_HEIGHT_TILES = 200
 PADDING_TILES = 15
