@@ -15,10 +15,16 @@
     if (name !== 'wind') audio.currentTime = 0;
     audio.play().catch(() => {});
   };
+  let audioUnlocked = false;
+  let unlockPending = false;
   const unlockAudio = () => {
+    if (audioUnlocked || unlockPending) return;
+    unlockPending = true;
     for (const [name, audio] of Object.entries(sounds)) {
       if (name === 'wind') {
-        audio.volume = .3; audio.loop = true; audio.play().catch(() => {});
+        audio.volume = .3; audio.loop = true;
+        audio.play().then(() => { audioUnlocked = true; unlockPending = false; })
+          .catch(() => { unlockPending = false; });
       } else {
         audio.muted = true;
         audio.play().then(() => { audio.pause(); audio.currentTime = 0; audio.muted = false; }).catch(() => { audio.muted = false; });
@@ -27,9 +33,12 @@
     const context = window.SDL2?.audioContext || window.Module?.SDL2?.audioContext;
     if (context && context.state === 'suspended') context.resume().catch(console.warn);
   };
-  document.addEventListener('touchstart', unlockAudio, {passive: true});
-  document.addEventListener('pointerdown', unlockAudio, {passive: true});
-  document.addEventListener('keydown', unlockAudio);
+  // Capture touch gestures before SDL consumes them. Safari can require the
+  // completed touch gesture, so retry on touchend if touchstart was blocked.
+  document.addEventListener('touchstart', unlockAudio, {passive: true, capture: true});
+  document.addEventListener('touchend', unlockAudio, {passive: true, capture: true});
+  document.addEventListener('pointerup', unlockAudio, {passive: true, capture: true});
+  document.addEventListener('keydown', unlockAudio, {capture: true});
   const originalFetch = window.fetch.bind(window);
   const state = window.slippyLoading = { bytes: 0, progress: 0, stage: 'Downloading Python and Pygame' };
   const paint = () => {
