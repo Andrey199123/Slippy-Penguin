@@ -10,8 +10,8 @@ import pygame.mixer
 import numpy as np
 
 # CONSTANTS
-OUTPUT_TMX_FILE = 'map.tmx'
-TILESET_SOURCE = 'graphics.tsx'
+OUTPUT_TMX_FILE = 'assets/map.tmx'
+TILESET_SOURCE = 'assets/graphics.tsx'
 ACTIVE_MAP_WIDTH_TILES = 11
 ACTIVE_MAP_HEIGHT_TILES = 200
 PADDING_TILES = 15
@@ -53,7 +53,7 @@ SCREEN_HEIGHT = 800
 WINDOW_TITLE = "Generated Slippy Terrain - Score"
 FPS = 60
 choose = random.randint(1, 2)
-BG_IMAGE_FILE = 'bg' + str(choose) + '.png'
+BG_IMAGE_FILE = 'assets/bg' + str(choose) + '.png'
 BG_SCROLL_SPEED = 50
 DOT_Z_LEVEL = PATH_Z_LEVEL
 CAMERA_FOLLOW_SMOOTHING = 0.05
@@ -83,9 +83,9 @@ SNOW_GRAVITY_PX_S = 90
 SNOW_WIND_DRIFT_PX_S = 25
 
 # SPRITE IMAGES
-PENGUIN_IMG_FORWARD = 'forward.png'
-PENGUIN_IMG_LEFT = 'left.png'
-PENGUIN_IMG_RIGHT = 'right.png'
+PENGUIN_IMG_FORWARD = 'assets/forward.png'
+PENGUIN_IMG_LEFT = 'assets/left.png'
+PENGUIN_IMG_RIGHT = 'assets/right.png'
 PENGUIN_SCALE_FACTOR = 0.6
 
 # SCOREBOARD
@@ -96,7 +96,7 @@ HIGHSCORE_COLOR = (200, 200, 200)
 SCORE_POS_X = SCREEN_WIDTH - 10
 SCORE_POS_Y = 10
 HIGHSCORE_POS_Y = SCORE_POS_Y + SCORE_FONT_SIZE + 5
-HIGHSCORE_FILENAME = "highscore.txt"
+HIGHSCORE_FILENAME = "assets/highscore.txt"
 
 
 class SnowSystem:
@@ -368,7 +368,7 @@ def map_to_screen_anchor(map_x, map_y, map_z):
 
 def draw_text(surface, text, size, x, y, color, align="center"):
     try:
-        font = pygame.font.Font("8-BIT WONDER.TTF", size)
+        font = pygame.font.Font("assets/8-BIT WONDER.TTF", size)
         text_surface = font.render(text, True, color)
         if align == "center":
             text_rect = text_surface.get_rect(center=(x, y))
@@ -398,10 +398,10 @@ def main(path_gid, active_tile_data):
 
     # SOUND INITIALIZATION
     pygame.mixer.init()
-    ambient_wind = pygame.mixer.Sound("wind.wav")
-    turn_sfx = pygame.mixer.Sound("turn.mp3")
-    lose_sfx = pygame.mixer.Sound("lose.mp3")
-    milestone_raw = pygame.mixer.Sound("milestone.wav")
+    ambient_wind = pygame.mixer.Sound("assets/wind.wav")
+    turn_sfx = pygame.mixer.Sound("assets/turn.mp3")
+    lose_sfx = pygame.mixer.Sound("assets/lose.mp3")
+    milestone_raw = pygame.mixer.Sound("assets/milestone.wav")
     ambient_wind.set_volume(0.30)
     ambient_wind.play(loops=-1)
 

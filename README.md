@@ -22,13 +22,8 @@ Slide across procedurally generated ice, dodge water gaps, and push your high sc
 ```
 .
 ├── main.py                # Game source
-├── graphics.tsx           # Isometric tileset definition
-├── map.tmx                # Main map used by the game
-├── forward.png, left.png, right.png
-├── bg1.png, bg2.png       # Parallax backgrounds
-├── wind.wav, turn.mp3, lose.mp3, milestone.wav
+├── assets/                # Map, tileset, sprites, audio, font, and high score
 ├── Tiled-main/            # Source Tiled project and additional assets
-├── highscore.txt          # Auto-created/updated
 └── README.md
 ```
 
@@ -70,6 +65,6 @@ Every 25-tile milestone plays an increasingly higher-pitched "ding." Falling off
 ## Modding
 
 * **Tileset** - edit the Tiled project under `Tiled-main/` and keep the game's asset paths in sync.
-* **Backgrounds** - add additional `bg*.png` files; one is chosen randomly on start.
-* **Audio** - replace the root-level WAV/MP3 files while keeping the milestone clip short and percussive.
-* **Font** - the game prefers `8-BIT WONDER.TTF`; if absent, it falls back to the system font.
+* **Backgrounds** - add additional `assets/bg*.png` files; one is chosen randomly on start.
+* **Audio** - replace the files under `assets/` while keeping the milestone clip short and percussive.
+* **Font** - the game prefers `assets/8-BIT WONDER.TTF`; if absent, it falls back to the system font.
