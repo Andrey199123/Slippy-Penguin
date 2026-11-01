@@ -1,14 +1,9 @@
-<html lang="en-us"><script>
-    // Set this before Pygbag's module starts so Safari cannot be misclassified
-    // by the Python browser proxy (especially iPadOS desktop-mode user agents).
-    window.__slippyIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-</script><script src="https://pygame-web.github.io/cdn/0.9.4/pythons.js" type=module id="site" data-python="python3.13" data-LINES=42 data-COLUMNS=132 data-os="vtx,fs,snd,gui,fbdev" async defer>#<!--
+<html lang="en-us"><script src="https://pygame-web.github.io/cdn/0.9.4/pythons.js" type=module id="site" data-COLUMNS=132 data-LINES=50 data-CONSOLE=25 data-python="python3.13" data-os="vtx,fs,snd,gui,fbdev" async defer>#<!--
 
 print("""
 Loading slippy-penguin from slippy-penguin.apk
     Pygbag Version : 0.9.4
-    Template Version : 0.9.4
+    Template Version : 0.9.0
     Python  : 3.13
     CDN URL : https://pygame-web.github.io/cdn/0.9.4/
     Screen  : 1200x800
@@ -20,127 +15,320 @@ Loading slippy-penguin from slippy-penguin.apk
 """)
 
 import sys
-import asyncio
 import platform
 import json
 from pathlib import Path
 
-# do not rename
+# import pygbag.aio as asyncio
+
+import aio
+import aio.fetch
+
+#if platform.window.location.host.find('localhost')>=0:
+#    aio.fetch.FS("""
+#http://localhost:8000/pygbag/pygbag/support/
+#. ~ .
+#├── offline.png
+#├── pygbag_app.py
+#├── pygbag_fsm.py
+#├── pygbag_host.py
+#├── pygbag_ui.py
+#└── pygbag_ux.py
+#""")
+
+import asyncio
+import builtins
+try:
+    re_entered
+except:
+    builtins.re_entered = False
+
+# do not rename, it has a special meaning for asyncio.run()
 async def custom_site():
-    import embed
-    import aio
-    import aio.fetch
-    import builtins
-    platform.document.body.style.background = "#000000"
+    global app
+    await aio.fetch.preload(chdir=False, isolated=True)
+    sys.path.append('/tmp')
+
+# TODO remove later
+    if re_entered:
+        platform.window.console.warn("54:       @@@@@@@@@@@@@@@@ ERROR @@@@@@@@@@@@@@          ")
+        return
+
+    builtins.re_entered = True
+
+
+#    if '-i' in sys.orig_argv:
+#        await asyncio.sleep(5)
+
+
+
+    import pygbag_app
+    import pygbag_ux as ux
+
+    #import pygbag_fsm
+    fsm = None #pygbag_fsm.build({})
+
+    app = pygbag_app
+    ui = app.ui
+    TTY = app.TTY
+    Tui = app.Tui
+
+
+    ux.dim(1200, 800)
 
     platform.window.transfer.hidden = true
     platform.window.canvas.style.visibility = "visible"
-    # Never gate game startup on browser media permission. Audio can still be
-    # unlocked later by the first touch or key press.
-    try:
-        platform.window.MM.UME = true
-    except Exception:
-        pass
 
+
+
+    console = app.console.get()
+
+    platform.document.body.style.background = "#555555"
+
+    apk = "slippy-penguin.apk"
 
     bundle = "slippy-penguin"
 
     # the C or js loader could do that but be explicit.
     appdir = Path(f"/data/data/{bundle}") # /data/data/slippy-penguin
-    appdir.mkdir()
+    appdir.mkdir() #parents=True, exist_ok=True)
 
 
-    apk = "slippy-penguin.apk"
-    try:
-        ios_device = bool(platform.window.__slippyIOS)
-    except Exception:
-        ios_device = False
-    # Use the mobile runtime for this browser build. The JS controls already
-    # handle desktop input, while Safari needs the mounted mobile filesystem.
-    ios_device = True
+    # mount apk
 
-    if ios_device:
-        # This is the official Pygbag mobile startup order. Safari needs the
-        # runtime fetch layer initialized before MM.prepare can mount the APK.
-        await aio.fetch.preload(chdir=False, isolated=True)
-        # iOS Safari cannot use the synchronous archive extraction path.
-        cfg = {
-            "io": "url",
-            "type": "mount",
-            "mount": {"point": appdir.as_posix(), "path": "/"},
+    cfg = {
+        "io": "url",
+        "type":"mount",
+        "mount" : {
+            "point" : appdir.as_posix(),
+            "path" : "/",
         }
-        track = platform.window.MM.prepare(apk, json.dumps(cfg))
-        while not track.avail:
+
+    }
+
+    track = platform.window.MM.prepare(apk, json.dumps(cfg))
+
+    marginx = ux.x(.020) # 20%
+    marginy = ux.y(.045) # 45%
+
+
+    async def pv(track, prefix="", suffix="", decimals=1, length=70, fill="X", printEnd="\r"):
+        # Progress Bar Printing Function
+        def print_pg_bar(total, iteration):
+            if iteration > total:
+                iteration = total
+            percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+            filledLength = int(length * iteration // total)
+            bar = fill * filledLength + "-" * (length - filledLength)
+            print(f"\r{prefix} |{bar}| {percent}% {suffix}", end=printEnd)
+
+        # Update Progress Bar
+        while True:
             if track.pos < 0:
                 raise IOError(404)
-            await asyncio.sleep(.1)
-    else:
-        # Desktop browsers are more reliable with the local archive path.
-        import zipfile
-        async with platform.fopen(apk, "rb") as archive:
-            with zipfile.ZipFile(archive) as zip_ref:
-                zip_ref.extractall(appdir.as_posix())
+            print_pg_bar(track.len or 100, track.pos or 0)
 
-    main = appdir / "assets" / "main.py"
+            if track.avail:
+                break
+            await asyncio.sleep(0.02)
 
-    if ios_device:
-        # Safari uses the mobile preload path; run_main assumes a local
-        # directory and can stall after a mounted archive.
-        __import__(__name__).__file__ = main
-        with open(main, "r") as source:
-            await shell.preload_code(source.read(), loaderhome=appdir / "assets", hint=main)
-        platform.explore(appdir / "assets")
-        while platform.preloading > 0:
-            platform.preloading = embed.preloading()
-            await asyncio.sleep(.2)
-        embed.run()
-        # Importing main starts the game's async loop and may not return until
-        # the game exits. Hide the loader before that import on mobile.
-        platform.window.infobox.style.display = "none"
-        platform.window.config.gui_divider = 1
-        platform.window.window_resize()
-        builtins.re_entered = True
-        import main as game_main
-        # Mobile imports main as a module, so its __main__ guard does not run.
-        # Schedule the actual game loop explicitly for the browser event loop.
-        asyncio.create_task(game_main.game_loop())
-        shell.interactive()
-        return
+        # Print New Line on Complete
+        print()
+        print("Done")
 
-    # Desktop browsers use the normal preloader and source path.
-    platform.run_main(PyConfig, loaderhome=appdir / "assets", loadermain=None)
-    while embed.counter() < 0:
-        await asyncio.sleep(.1)
 
-    # start async top level machinery if not started and add a console in any case if requested.
-    await TopLevel_async_handler.start_toplevel(platform.shell, console=window.python.config.debug)
+    print(f'Downloading and mounting assets on track {track.trackid} :')
+    # wait until zip mount + overlayfs is complete
+    await pv(track)
+    #await asyncio.sleep(.1)
 
-    # now that apk is mounted we have access to font cache
-    # but we need to fill __file__/__name__ that are not yet set
-    __import__(__name__).__file__ = main
+
+    # preloader will change dir and prepend it to sys.path
+    # but do not run main.py yet.
+
+    assets = appdir / "assets"
+
+
+    # we need to fill __file__ that is not yet set
+    # as default exec mode is REPL from stdin
+    __import__(__name__).__file__ = (assets / "main.py").as_posix()
 
 
     def ui_callback(pkg):
-        platform.window.infobox.innerText = f"installing {pkg}"
+        print(f"installing {pkg}")
 
-    await shell.source(main, callback=ui_callback)
-    print("main source loaded")
 
-    # if you don't reach that step
-    # your main.py has an infinite sync loop somewhere !
+    while not Path(__file__).is_file():
+        print("mobile.tmpl: waiting for main")
+        await asyncio.sleep(.1)
 
-    platform.window.infobox.style.display = "none"
-    platform.window.config.gui_divider = 1
-    platform.window.window_resize()
-    print("default.tmpl: done")
+    # get all modules from guesswork or pep0722/0723
 
-    shell.interactive()
+    # preloading will change directory to assets dir and prepare imports.
+    with open(__file__,"r") as source:
+        await shell.preload_code(source.read(), loaderhome=appdir / "assets", hint=__file__)
 
+
+    # do wasm streaming compilation on all gathered .so
+    platform.explore(assets)
+
+    # wait preloading complete
+    # that includes images and wasm compilation of bundled modules
+    while platform.preloading>0:
+        platform.preloading = embed.preloading()
+        print(f"Assets to streaming-compile : {platform.preloading}")
+        await asyncio.sleep(.5)
+
+    print("mobile.tmpl: top level")
+
+    # test/wait user media interaction
+    print(   platform.window.MM.UME )
+    if str(platform.window.MM.UME)!="true":
+
+        # now make a prompt
+        print("Ready to start !")
+
+        print("""
+
+        * Waiting for media user engagement : please click/touch page *
+
+
+    """)
+        while not platform.window.MM.UME:
+            await asyncio.sleep(.1)
+
+
+    # unlock async for main.py loop ( 2nd asyncio.run call )
+    embed.run()
+
+
+    loop = asyncio.get_event_loop()
+
+
+    # mypyc/hpy require modules.
+    print("mobile.tmpl: running 'main' as a module", __name__, __file__, os.getcwd(), sys.modules.get('main','ok'))
+
+    # get symbols of "main" for REPL "__main__"
+    import main
+
+    for k,v in vars(main).items():
+        if not k.startswith('_'):
+            globals()[k]=v
+
+
+    def console_display():
+        if len(ui.clog):
+            print()
+            while len(ui.clog):
+                l = ui.clog.pop(0)
+                print(l)
+                try:
+                    platform.window.console.log(l)
+                except:
+                    ...
+
+            TTY.prompts.append(1)
+
+
+    # this tty is program normal flow
+    ui.goto_xy(1,1)
+
+    # so save is done here
+    ESC("7")
+
+    ui.goto_xy(1, app.TTY.LINES + app.TTY.CONSOLE)
+    print(">>> ", end=sys.__eot__)
+
+
+    try:
+        while not app.TTY.closed:
+            ESC("8")
+            while len(platform.frames):
+                frame = platform.frames.pop(0)
+                # should not be used at all or PTY context required
+#                if inspect.iscoroutinefunction(frame):
+#                    await frame(timestamp=0.0)
+#                else:
+                frame(timestamp=0.0)
+            ESC("7")
+
+            await asyncio.sleep(app.sleep_delay)
+
+            if not PyConfig.interactive:
+                continue
+
+
+    #        if (last_state != fsm.state):
+    #            app.log(f"{last_state}=>{fsm.state}")
+    #            last_state = fsm.state
+
+            with Tui() as out:
+    #            lbuf = ctx()["io"][0]
+    #            for z,x, row in lbuf:
+    #                out( row, x=x, z=z )
+    #            lbuf.clear()
+
+
+    #            for z,x, row in bufs.values():
+    #                out( row, x=x, z=z )
+    #            bufs.clear()
+
+
+    #            import io
+    #            sio = io.StringIO()
+    #            rich.print(rich.panel.Panel(get_panels(), width=55) , file=sio)
+    #            sio.seek(0)
+    #            out( sio.read(), x=10, z=2, filter = ui.filter_out )
+                out( f"{TTY.COLUMNS}x({TTY.LINES}+{TTY.CONSOLE}):{TTY.console}\
+ fsm={fsm and fsm.state} C={TTY.C} L={TTY.L}\
+ min/avg/max:{aio.load_min} {aio.load_avg} {aio.load_max}\
+  ⏏︎ ■ ▶\
+ {TTY.last_event_type}({TTY.last_event_data})\
+                      ", x=1, y=TTY.LINES)
+
+            if TTY.event_type:
+                if TTY.event_type == "click":
+                    act(TTY.event_data)
+
+            # async readline interface ( await input() )
+            if TTY.input():
+                pass
+
+            # console zone ( only when mouse hovering )
+            elif TTY.console:
+                # readline editing
+                # console prompt  zone #todo pos cursor readline
+                ui.goto_xy(5, app.TTY.LINES + app.TTY.CONSOLE)
+
+                TTY.prompt()
+
+                # exec
+                if len(TTY.rl_complete):
+                    aio.toplevel.handler.instance.buffer.append("\n".join(TTY.rl_complete))
+                    TTY.rl_complete.clear()
+                await aio.toplevel.handler.instance.interact_step('>_> ')
+
+            # app loops only when not in console
+            else:
+                ...
+                #frames.append( tetryscale.pygame.loop() )
+
+            # console zone ( display, always, force scroll by display on last line )
+            console_display()
+
+
+    except asyncio.exceptions.CancelledError:
+        print("Cancelled")
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt")
+    finally:
+        TTY.set_raw(0)
+        print("killing tasks, FIXME restart REPL for WASM")
+        aio.exit_now(0)
+
+
+platform.window.console.warn("        **************************************         ")
 asyncio.run( custom_site() )
-
-
-
-
 
 
 
@@ -184,111 +372,26 @@ config = {
     _sdl2 : "canvas",
     user_canvas : 0,
     user_canvas_managed : 0,
-    gui_divider : 2,
-    ume_block : 0,
+    ume_block : 1,
     can_close : 0,
     archive : "slippy-penguin",
-    gui_debug : 2,
+    gui_debug : 1.5,
     cdn : "https://pygame-web.github.io/cdn/0.9.4/",
     autorun : 0,
-    PYBUILD : "3.13",
-    fb_ar   :  1.5,
-    fb_width : "1200",
-    fb_height : "800"
+    PYBUILD : "3.13"
 }
-
-function show_infobox() {
-    infobox.style.display = "block";
-
-    // Measure box
-    const w = infobox.offsetWidth;
-    const h = infobox.offsetHeight;
-
-    // Center in viewport
-    const left = (window.innerWidth - w) / 2;
-    const top = (window.innerHeight - h) / 2;
-
-    infobox.style.left = left + "px";
-    infobox.style.top = top + "px";
-}
-
-// Browser autoplay policy requires the audio unlock to happen directly inside
-// the user's gesture handler. Python receives the corresponding event later.
-(function unlockBrowserAudio() {
-    const wind = new Audio("assets/wind.ogg");
-    const turn = new Audio("assets/turn.ogg");
-    wind.loop = true;
-    wind.volume = 0.3;
-
-    const playTurn = () => {
-        turn.currentTime = 0;
-        turn.play().catch(() => {});
-    };
-
-    const unlock = () => {
-        try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-                window.__slippyAudioContext ||= new AudioContext();
-                window.__slippyAudioContext.resume();
-            }
-        } catch (_) {
-            // pygame will keep running silently if this browser has no Web Audio API.
-        }
-        if (window.MM) window.MM.UME = true;
-        wind.play().catch(() => {});
-    };
-    window.addEventListener("pointerdown", unlock, { passive: true });
-    window.addEventListener("keydown", (event) => {
-        unlock();
-        if (["ArrowLeft", "ArrowRight", "a", "d"].includes(event.key)) playTurn();
-    }, { passive: true });
-})();
-
-// Convert iOS/trackpad swipes into the same arrow-key events used by desktop.
-(function enableSwipeControls() {
-    let startX = 0;
-    let startY = 0;
-    const threshold = 28;
-    const target = document.getElementById("canvas") || document;
-    const sendKey = (key) => {
-        window.dispatchEvent(new KeyboardEvent("keydown", {
-            key,
-            code: key,
-            bubbles: true,
-            cancelable: true
-        }));
-    };
-    target.addEventListener("touchstart", (event) => {
-        const touch = event.changedTouches[0];
-        startX = touch.clientX;
-        startY = touch.clientY;
-    }, { passive: true });
-    target.addEventListener("touchend", (event) => {
-        const touch = event.changedTouches[0];
-        const dx = touch.clientX - startX;
-        const dy = touch.clientY - startY;
-        if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return;
-        if (Math.abs(dx) > Math.abs(dy)) {
-            sendKey(dx > 0 ? "ArrowRight" : "ArrowLeft");
-        } else {
-            sendKey(dy > 0 ? "ArrowDown" : "ArrowUp");
-        }
-    }, { passive: true });
-})();
 
 </script>
 
     <title>slippy-penguin</title>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="viewport" content="height=device-height, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes"/>
-
+    <meta name="viewport" content="minimal-ui, width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1, user-scalable=no"">
 
     <link rel="icon" type="image/png" href="favicon.png" sizes="16x16">
+    <link rel="stylesheet" type="text/css" href="https://pygame-web.github.io/cdn/0.9.4//cssreset-min.css">
 
     <style>
         #status {
@@ -305,33 +408,6 @@ function show_infobox() {
             width: 300px;
         }
 
-        #infobox {
-            position: fixed; /* center relative to viewport */
-            background: rgba(0, 0, 0, 0.82);
-            color: #ffffff;
-            font-weight: bold;
-            padding: 14px 22px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: 6px;
-            font-family: system-ui, sans-serif;
- /*           display: none; */
-            z-index: 999999;
-        }
-        #github-link {
-            position: fixed;
-            left: 50%;
-            bottom: 10px;
-            transform: translateX(-50%);
-            z-index: 20;
-            color: rgba(255, 255, 255, 0.72);
-            font: 14px system-ui, sans-serif;
-            text-decoration: none;
-        }
-        #github-link:hover,
-        #github-link:focus-visible {
-            color: #ffffff;
-            text-decoration: underline;
-        }
         div.emscripten { text-align: center; }
         div.emscripten_border { border: 1px solid black; }
         div.thick_border { border: 4px solid black; }
@@ -341,8 +417,8 @@ function show_infobox() {
         canvas.emscripten {
             border: 0px none;
             background-color: transparent;
-            width: min(100vw, 150vh);
-            height: min(100vh, 66.6667vw);
+            width: 100%;
+            height: 100%;
             z-index: 5;
 
             padding: 0;
@@ -355,11 +431,22 @@ function show_infobox() {
             right: 0;
         }
 
+        canvas.moved {
+            border: 0px none;
+            background-color: transparent;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+
+            padding: 0;
+            margin: 0 auto;
+        }
+
         body {
-            font-family: system-ui, sans-serif;
+            font-family: arial;
             margin: 0;
             padding: none;
-            background-color: #000000;
+            background-color: #1a1c1f;
         }
 
         .topright{
@@ -368,10 +455,16 @@ function show_infobox() {
            right:0px;
         }
 
+        .rightpane{
+            position:absolute;
+            left : 50%;
+        }
+
         .bottomright {
             position:absolute;
-            top: 40%;
+            top: 70%;
             right: 0px;
+            height: 30%;
         }
 
         .center {
@@ -380,35 +473,20 @@ function show_infobox() {
             justify-content: center;
         }
 
-        .trinfo{
-           position: relative;
-           right: 0px;
-           border: 1px solid black;
-        }
-
         .framed{
            position: relative;
-           top: 150px;
-           right: 10px;
-           border: 1px solid black;
+           top: 0px;
+           right: 0px;
+           border: 1px solid white;
         }
     </style>
 
-    <script>
-/*
-        if (navigator.serviceWorker)
-            navigator.serviceWorker.register("https://pygame-web.github.io/cdn/0.9.4/pygbag0.9.4.js")
-        else
-            console.warn("Service workers not supported")
-*/
-    </script>
-
 </head>
 
-<body>
+<body id=body>
+
 
     <div id="transfer" align=center>
-<!--        <div class="spinner" id='spinner'></div> -->
         <div class="emscripten" id="status">Downloading...</div>
         <div class="emscripten">
             <progress value="0" max="100" id="progress"></progress>
@@ -416,67 +494,40 @@ function show_infobox() {
     </div>
 
 
-
     <canvas class="emscripten" id="canvas"
 width="1px"
 height="1px"
-    oncontextmenu="event.preventDefault()" tabindex=1>
+    oncontextmenu="event.preventDefault()" tabindex=0>
     </canvas>
 
-    <canvas class="emscripten" id="canvas3d"
-width="1200px"
-height="800px"
-    oncontextmenu="event.preventDefault()" tabindex=1 hidden>
-    </canvas>
-
-    <a id="github-link" href="https://github.com/Andrey199123"
-       target="_blank" rel="noopener noreferrer">Created by Andrey Vasilyev</a>
-
-    <div id="infobox">Loading, please wait ...</div>
 
     <div id=html></div>
 
-    <div id=crt  class=bottomright >
 
-        <div id="system" hidden>
-            <div class="button-container">
-                <button id="aiostop" disabled>AIO ⏏︎</button>
-                <button id="aiopaused_true" disabled>AIO ■</button>
-                <button id="aiopaused_false" disabled>AIO ▶</button>
-                <button id="pygame_mixer_music_pause" disabled>Music ■</button>
-            </div>
+    <div id=crt class=bottomright>
 
-            <div class="button-container">
-                <div id=load_min>min</div>
-                <div id=load_avg>avg</div>
-                <div id=load_max>max</div>
-              <button id="load_rst" disabled>RESET</button>
-            </div>
+        <div id=box class=emscripten_border hidden=true>
 
-            <div id="level">(battery level unknown)</div>
-            <div id="stateBattery">(charging state unknown)</div>
+        <canvas id=canvas3d class="emscripten"
+width="512px"
+height="512px"
+        oncontextmenu="event.preventDefault()">
+        </canvas>
 
-        </div>
-
-        <div id=box class="emscripten_border" hidden=true>
-
-            <div id="info" class="trinfo"></div>
-
-            <iframe id="iframe" class="framed" name="iframe"
-width="470px" height="90%"
+<iframe id="dlhandler" class="framed" name="dlhandler"
+width="470px" height="95%"
+loading="lazy"
 allowtransparency="true"
 style="z-index: 10;"
 style="background: #FFFFFF;"
 frameborder="1"
-                allowfullscreen="true"
-                webkitallowfullscreen="true"
-                msallowfullscreen="true"
-                mozallowfullscreen="true"
-                sandbox="allow-same-origin allow-top-navigation allow-scripts allow-pointer-lock"
-                allow="autoplay; fullscreen *; geolocation; microphone; camera; midi; monetization; xr-spatial-tracking; gamepad; gyroscope; accelerometer; xr; cross-origin-isolated"
-                src="https://pygame-web.github.io/cdn/0.9.4/empty.html"
-                scrolling="yes">
-            </iframe>
+    sandbox="allow-same-origin allow-top-navigation allow-scripts allow-pointer-lock"
+    allow="autoplay; fullscreen *; geolocation; microphone; camera; midi; monetization; xr-spatial-tracking; gamepad; gyroscope; accelerometer; xr; cross-origin-isolated"
+    src="https://pygame-web.github.io/cdn/0.9.4/../../cdn/lib/index.html"
+    scrolling="yes">
+</iframe>
+
+
         </div>
 
     </div>
@@ -488,71 +539,84 @@ frameborder="1"
     </div>
 
     <div id="pyconsole">
-        <div id="terminal" tabIndex=1 align="left"></div>
+        <div id="terminal" tabIndex=1 align="left"
+            ondrag="dragHandler(event);"
+            ondrop="dropHandler(event);"
+            ondragover="dragOverHandler(event);">
+        </div>
     </div>
 
-    <script type="application/javascript">
+<script type="application/javascript">
 
-    globalThis.__canvas_resized = (self, ecw, ech) => {
-        console.warn("TODO: panda3d canvas monitor", self, ecw, ech)
+var dragged = null;
+function dragHandler(event) {
+    dragged = event.target;
+}
+function dropHandler(ev) {
+
+    // prevent default action (open as a link for some elements)
+    ev.preventDefault();
+
+    // Loop through the dropped items and log their data
+    filelist = []
+
+    for (const item of ev.dataTransfer.items) {
+
+        if (item.kind === "file") {
+            filelist.push(item.getAsFile())
+            continue;
+        }
+
+        //if (item.kind === "string" && item.type.match(/^text\/plain/)) {
+        //if (item.kind === "string" && item.type.match(/^text\/html/)) {
+        //if (item.kind === "string" && item.type.match(/^text\/uri-list/)) {
+        console.log('?',file.name, item.type )
     }
 
-    async function custom_onload(debug_hidden) {
-        // this is called before anything python is loaded
-        // make your js customization here
-        console.log(__FILE__, "custom_onload")
+    console.log("dropHandler", filelist.length)
+    if (filelist.length)
+        transfer_uploads(filelist, true)
+    dragged = null;
+}
 
-        pyconsole.hidden = debug_hidden
-        system.hidden = debug_hidden
-        transfer.hidden = debug_hidden
-        info.hidden = debug_hidden
-        box.hidden =  debug_hidden
-
-        show_infobox()
+function dragOverHandler(event) {
+    if (!dragged) {
+        dragged = event.target;
+        console.log("dragOverHandler", event.dataTransfer)
     }
+    event.preventDefault();
 
-    function custom_prerun(){
-        // no python main and no (MEMFS + VFS) yet.
-        console.log(__FILE__, "custom_prerun")
+}
 
-    }
+async function custom_onload(debug_hidden) {
+    // this is called before anything python is loaded
+    // make your js customization here
+    console.log(__FILE__, "custom_onload")
+    pyconsole.hidden = debug_hidden
+    box.hidden =  debug_hidden
+}
 
-    function custom_postrun(){
-        // python main and no VFS filesystem yet.
-        console.log(__FILE__, "custom_postrun")
+function custom_prerun(){
+    // no python main and no (MEMFS + VFS) yet.
+    console.log(__FILE__, "custom_prerun")
 
-    }
+}
 
-    function debug() {
-        // allow to gain access to dev tools from js console
-        // but only on desktop. difficult to reach when in iframe
-        python.config.debug = true
-        custom_onload(false)
-        Module.PyRun_SimpleString("shell.uptime()")
-        window_resize()
-    }
+function custom_postrun(){
+    // python main and no VFS filesystem yet.
+    console.log(__FILE__, "custom_postrun")
+}
 
-    function info_inline(data){
-        document.getElementById("info").innerHTML = data
-    }
+function debug() {
+    // allow to gain access to dev tools from js console
+    // but only on desktop. difficult to reach when in iframe
+    python.config.debug = true
+    custom_onload(false)
+    Module.PyRun_SimpleString("shell.uptime()")
+    window_resize()
+}
 
-    function info_online(url) {
-        // display info about current APK
-        fetch( url /*, options */)
-            .then((response) => response.text())
-            .then((html) => {
-                info_inline(html);
-        })
-        .catch((error) => {
-            console.warn(error);
-        });
-    }
-
-    function frame_online(url) {
-        window.frames["iframe"].location = url;
-    }
-
-    </script>
+</script>
 
 </body>
 </html>
