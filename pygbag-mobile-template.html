@@ -81,7 +81,10 @@ async def custom_site():
 
 
 
-    console = app.console.get()
+    # The official template's terminal console setup calls termios on stdin.
+    # That is not available in iOS Safari and aborts the runtime before the
+    # mounted game module can start. The game does not use the REPL console.
+    console = app.console
 
     platform.document.body.style.background = "#555555"
 
@@ -181,21 +184,10 @@ async def custom_site():
 
     print("mobile.tmpl: top level")
 
-    # test/wait user media interaction
-    print(   platform.window.MM.UME )
-    if str(platform.window.MM.UME)!="true":
-
-        # now make a prompt
-        print("Ready to start !")
-
-        print("""
-
-        * Waiting for media user engagement : please click/touch page *
-
-
-    """)
-        while not platform.window.MM.UME:
-            await asyncio.sleep(.1)
+    # Do not block the game behind the browser's audio-gesture gate. Audio
+    # remains subject to Safari's policy and is unlocked by the first touch;
+    # rendering and touch/swipe gameplay must start without that gesture.
+    platform.window.MM.UME = True
 
 
     # unlock async for main.py loop ( 2nd asyncio.run call )
@@ -209,9 +201,13 @@ async def custom_site():
     print("mobile.tmpl: running 'main' as a module", __name__, __file__, os.getcwd(), sys.modules.get('main','ok'))
 
     # get symbols of "main" for REPL "__main__"
-    import main
+    import main as game_main
 
-    for k,v in vars(main).items():
+    # Importing main as a module does not execute its __main__ block.
+    # Schedule the actual game loop explicitly for the mobile template.
+    asyncio.create_task(game_main.game_loop())
+
+    for k,v in vars(game_main).items():
         if not k.startswith('_'):
             globals()[k]=v
 
