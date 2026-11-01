@@ -1,4 +1,4 @@
-<html lang="en-us"><script src="https://pygame-web.github.io/cdn/0.9.3/pythons.js" type=module id="site" data-python="python3.12" data-LINES=42 data-COLUMNS=132 data-os="vtx,snd,gui" async defer>#<!--
+<html lang="en-us"><script src="loading-progress.js"></script><script src="https://pygame-web.github.io/cdn/0.9.3/pythons.js" type=module id="site" data-python="python3.12" data-LINES=42 data-COLUMNS=132 data-os="vtx,snd,gui" async defer>#<!--
 
 print("""
 Loading slippy-penguin from slippy-penguin.apk
@@ -322,40 +322,6 @@ height="800px"
       const meter = document.getElementById('loading-meter');
       const bar = document.getElementById('game-load-progress');
       const label = document.getElementById('game-load-label');
-      const originalFetch = window.fetch.bind(window);
-      window.fetch = async function(input, init) {
-        const response = await originalFetch(input, init);
-        const url = typeof input === 'string' ? input : input.url;
-        if (!/slippy-penguin\.(tar\.gz|apk)(\?|$)/.test(url || '') || !response.ok || !response.body) return response;
-        // Use the decoded archive size: CDN compression can omit or alter
-        // Content-Length, while the response stream reports decoded bytes.
-        const total = /\.tar\.gz(\?|$)/.test(url) ? 12210733 : 12233431;
-        const reader = response.body.getReader();
-        let received = 0;
-        label.textContent = 'Downloading game assets…';
-        const stream = new ReadableStream({
-          async pull(controller) {
-            try {
-              const {done, value} = await reader.read();
-              if (done) {
-                controller.close();
-                bar.max = total; bar.value = total;
-                label.textContent = 'Preparing game assets and starting Pygame…';
-                return;
-              }
-              received += value.byteLength;
-              bar.max = total; bar.value = Math.min(received, total);
-              label.textContent = `Downloading game assets: ${Math.min(100, Math.round(received / total * 100))}%`;
-              controller.enqueue(value);
-            } catch (error) {
-              label.textContent = 'Download failed. Reload to retry.';
-              controller.error(error);
-            }
-          },
-          cancel(reason) { return reader.cancel(reason); }
-        });
-        return new Response(stream, {status: response.status, statusText: response.statusText, headers: response.headers});
-      };
       const check = setInterval(() => {
         if (document.getElementById('infobox').style.display === 'none') {
           meter.remove(); clearInterval(check);
