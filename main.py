@@ -7,7 +7,6 @@ import random
 import math
 import itertools
 import pygame.mixer
-import numpy as np
 import asyncio
 
 # CONSTANTS
@@ -140,6 +139,7 @@ def pitch_shift(sound: pygame.mixer.Sound, semitones: float) -> pygame.mixer.Sou
     """
     if semitones == 0:
         return sound
+    import numpy as np
     arr = pygame.sndarray.array(sound)
     orig_dtype = arr.dtype
     factor = 2 ** (semitones / 12.0)
