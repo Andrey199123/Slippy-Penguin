@@ -98,6 +98,9 @@ async def custom_site():
         platform.window.window_resize()
         builtins.re_entered = True
         import main as game_main
+        # Mobile imports main as a module, so its __main__ guard does not run.
+        # Schedule the actual game loop explicitly for the browser event loop.
+        asyncio.create_task(game_main.game_loop())
         shell.interactive()
         return
 
