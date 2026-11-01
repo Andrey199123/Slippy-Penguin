@@ -160,6 +160,25 @@ function show_infobox() {
     infobox.style.top = top + "px";
 }
 
+// Browser autoplay policy requires the audio unlock to happen directly inside
+// the user's gesture handler. Python receives the corresponding event later.
+(function unlockBrowserAudio() {
+    const unlock = () => {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                window.__slippyAudioContext ||= new AudioContext();
+                window.__slippyAudioContext.resume();
+            }
+        } catch (_) {
+            // pygame will keep running silently if this browser has no Web Audio API.
+        }
+        if (window.MM) window.MM.UME = true;
+    };
+    window.addEventListener("pointerdown", unlock, { passive: true });
+    window.addEventListener("keydown", unlock, { passive: true });
+})();
+
 </script>
 
     <title>slippy-penguin</title>
