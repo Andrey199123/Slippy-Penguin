@@ -269,7 +269,12 @@ def segmented_path(active_width, active_height, start_x_rel, min_len, max_len, t
         else:
             break
         spawn_branch(tile_data_3d, current_x, current_y, direction, active_width, active_height, path_gid)
-        segment_length = random.randint(min_len, max_len)
+        # Give a fresh run enough runway for the player to see the path and
+        # make the first turn instead of dying almost immediately at score 2–3.
+        if path_tiles_generated == 1:
+            segment_length = random.randint(max(8, min_len), max_len)
+        else:
+            segment_length = random.randint(min_len, max_len)
         for i in range(segment_length):
             next_x = current_x + direction[0]
             next_y = current_y + direction[1]
