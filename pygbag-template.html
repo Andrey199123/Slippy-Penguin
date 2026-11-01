@@ -503,6 +503,11 @@ frameborder="1"
         box.hidden =  debug_hidden
 
         show_infobox()
+        // Safari can leave the Pygbag status callback visible even after the
+        // pygame canvas and audio loop are already running.
+        window.setTimeout(() => {
+            if (window.infobox) window.infobox.style.display = "none"
+        }, 3000)
     }
 
     function custom_prerun(){
