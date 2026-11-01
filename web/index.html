@@ -179,8 +179,8 @@ async def custom_site():
     platform.window.MM.UME = True
 
 
-    # unlock async for main.py loop ( 2nd asyncio.run call )
-    embed.run()
+    # The browser runtime is already running this coroutine. Calling the
+    # template's second event-loop reset here strands Safari on the shell.
 
 
     # Load the game module directly; this is not a REPL session.
