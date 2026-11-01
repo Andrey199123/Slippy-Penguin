@@ -108,6 +108,11 @@ HIGHSCORE_FILENAME = "assets/highscore.txt"
 class SnowSystem:
     def __init__(self, width, height):
         self.w, self.h = width, height
+        self.flakes = {}
+        for radius in range(SNOW_RADIUS_MIN, SNOW_RADIUS_MAX + 1):
+            flake = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
+            pygame.draw.circle(flake, (255, 255, 255), (radius + 1, radius + 1), radius)
+            self.flakes[radius] = flake
         self.particles = []
         self._time_accum = 0.0
 
@@ -133,8 +138,8 @@ class SnowSystem:
         self.particles = alive
 
     def draw(self, surf):
-        for x, y, r, *_ in self.particles:
-            pygame.draw.circle(surf, (255, 255, 255), (int(x), int(y)), int(r))
+        surf.blits([(self.flakes[int(r)], (int(x) - int(r) - 1, int(y) - int(r) - 1))
+                    for x, y, r, *_ in self.particles], doreturn=False)
 
 
 # HELPER FUNCTIONS
@@ -437,6 +442,9 @@ async def main(path_gid, active_tile_data):
     pygame.display.set_caption(f"{WINDOW_TITLE}")
     clock = pygame.time.Clock()
     snow = SnowSystem(SCREEN_WIDTH, SCREEN_HEIGHT)
+    game_over_overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert()
+    game_over_overlay.fill((0, 0, 0))
+    game_over_overlay.set_alpha(180)
     with open(HIGHSCORE_FILENAME, 'r') as f:
         txt = f.read().strip()
         high_score = int(txt) if txt else 0
@@ -624,11 +632,13 @@ async def main(path_gid, active_tile_data):
         for row in range(int((camera_y - cull_buffer) // 128), int((camera_y + SCREEN_HEIGHT + cull_buffer) // 128) + 1):
             visible_tiles.extend(tile_rows.get(row, ()))
         visible_tiles.sort(key=lambda tile: tile[0])
+        tile_blits = []
         for _, anchor_x_raw, anchor_y_raw, image in visible_tiles:
             final_anchor_x = anchor_x_raw - camera_x
             final_anchor_y = anchor_y_raw - camera_y
             if visible_screen_rect_cull.collidepoint(final_anchor_x, final_anchor_y):
-                screen.blit(image, (final_anchor_x - TILE_WIDTH_PX / 2, final_anchor_y - TILE_HEIGHT_PX))
+                tile_blits.append((image, (final_anchor_x - TILE_WIDTH_PX / 2, final_anchor_y - TILE_HEIGHT_PX)))
+        screen.blits(tile_blits, doreturn=False)
         for layer in ():  # Static map rendering is handled by the cache above.
             if isinstance(layer, pytmx.TiledTileLayer):
                 map_z = layer.properties.get('z_level', 0)
@@ -679,9 +689,7 @@ async def main(path_gid, active_tile_data):
             if sound_enabled and not lose_sound_already_played:
                 lose_sfx.play()
                 lose_sound_already_played = True
-            overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)  # Transparent
-            overlay.fill((0, 0, 0, 180))
-            screen.blit(overlay, (0, 0))
+            screen.blit(game_over_overlay, (0, 0))
             game_over_y_offset = -80
             draw_text(screen, "GAME OVER", GAME_OVER_FONT_SIZE, SCREEN_WIDTH // 2,
                       SCREEN_HEIGHT // 2 + game_over_y_offset - 100, FONT_COLOR, align="center")
