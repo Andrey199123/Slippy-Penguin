@@ -4,7 +4,7 @@
   "framework": null,
   "headers": [
     {
-      "source": "/(.*).apk",
+      "source": "/slippy-penguin.apk",
       "headers": [
         { "key": "Content-Type", "value": "application/octet-stream" },
         { "key": "Content-Disposition", "value": "inline" },
