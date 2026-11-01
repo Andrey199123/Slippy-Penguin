@@ -48,7 +48,12 @@ async def custom_site():
         },
     }
     track = platform.window.MM.prepare(apk, json.dumps(cfg))
-    while not track.ready:
+    # Pygbag's mobile mount tracker exposes completion through `avail`.
+    # `ready` is not populated in Safari or in desktop browsers, which leaves
+    # the loading screen running forever after the APK has downloaded.
+    while not track.avail:
+        if track.pos < 0:
+            raise IOError(404)
         await asyncio.sleep(.1)
 
     # preloader will change to work dir and prepend it to sys.path
