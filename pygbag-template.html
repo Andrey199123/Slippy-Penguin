@@ -423,8 +423,8 @@ height="{{cookiecutter.height}}px"
     oncontextmenu="event.preventDefault()" tabindex=1 hidden>
     </canvas>
 
-    <a id="github-link" href="https://github.com/Andrey199123/Slippy-Penguin"
-       target="_blank" rel="noopener noreferrer">View the source on GitHub</a>
+    <a id="github-link" href="https://github.com/Andrey199123"
+       target="_blank" rel="noopener noreferrer">Created by Andrey Vasilyev</a>
 
     <div id="infobox">Loading, please wait ...</div>
 
@@ -503,11 +503,6 @@ frameborder="1"
         box.hidden =  debug_hidden
 
         show_infobox()
-        // Safari can leave the Pygbag status callback visible even after the
-        // pygame canvas and audio loop are already running.
-        window.setTimeout(() => {
-            if (window.infobox) window.infobox.style.display = "none"
-        }, 3000)
     }
 
     function custom_prerun(){
