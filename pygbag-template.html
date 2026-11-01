@@ -163,6 +163,16 @@ function show_infobox() {
 // Browser autoplay policy requires the audio unlock to happen directly inside
 // the user's gesture handler. Python receives the corresponding event later.
 (function unlockBrowserAudio() {
+    const wind = new Audio("assets/wind.ogg");
+    const turn = new Audio("assets/turn.ogg");
+    wind.loop = true;
+    wind.volume = 0.3;
+
+    const playTurn = () => {
+        turn.currentTime = 0;
+        turn.play().catch(() => {});
+    };
+
     const unlock = () => {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -174,9 +184,13 @@ function show_infobox() {
             // pygame will keep running silently if this browser has no Web Audio API.
         }
         if (window.MM) window.MM.UME = true;
+        wind.play().catch(() => {});
     };
     window.addEventListener("pointerdown", unlock, { passive: true });
-    window.addEventListener("keydown", unlock, { passive: true });
+    window.addEventListener("keydown", (event) => {
+        unlock();
+        if (["ArrowLeft", "ArrowRight", "a", "d"].includes(event.key)) playTurn();
+    }, { passive: true });
 })();
 
 </script>
