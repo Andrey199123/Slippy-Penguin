@@ -1,6 +1,29 @@
 // Installed before Pygbag so Python, WASM, package and game downloads count.
 (() => {
+  const sounds = {};
+  for (const name of ['wind', 'turn', 'lose', 'milestone']) {
+    const audio = new Audio(`audio/${name}.m4a`);
+    audio.preload = 'auto';
+    sounds[name] = audio;
+  }
+  window.slippySound = (name, action, volume = 1) => {
+    const audio = sounds[name];
+    if (!audio) return;
+    if (action === 'stop') { audio.pause(); return; }
+    audio.volume = volume;
+    audio.loop = name === 'wind';
+    if (name !== 'wind') audio.currentTime = 0;
+    audio.play().catch(() => {});
+  };
   const unlockAudio = () => {
+    for (const [name, audio] of Object.entries(sounds)) {
+      if (name === 'wind') {
+        audio.volume = .3; audio.loop = true; audio.play().catch(() => {});
+      } else {
+        audio.muted = true;
+        audio.play().then(() => { audio.pause(); audio.currentTime = 0; audio.muted = false; }).catch(() => { audio.muted = false; });
+      }
+    }
     const context = window.SDL2?.audioContext || window.Module?.SDL2?.audioContext;
     if (context && context.state === 'suspended') context.resume().catch(console.warn);
   };

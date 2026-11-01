@@ -8,6 +8,11 @@ import math
 import itertools
 import pygame.mixer
 import asyncio
+from functools import lru_cache
+
+@lru_cache(maxsize=256)
+def cached_text(text, size, color):
+    return pygame.font.Font('assets/8-BIT WONDER.TTF', size).render(text, True, color)
 
 # CONSTANTS
 OUTPUT_TMX_FILE = 'assets/map.tmx'
@@ -354,8 +359,7 @@ def map_to_screen_anchor(map_x, map_y, map_z):
 
 def draw_text(surface, text, size, x, y, color, align="center"):
     try:
-        font = pygame.font.Font("assets/8-BIT WONDER.TTF", size)
-        text_surface = font.render(text, True, color)
+        text_surface = cached_text(text, size, color)
         if align == "center":
             text_rect = text_surface.get_rect(center=(x, y))
         elif align == "topleft":
@@ -392,6 +396,25 @@ async def main(path_gid, active_tile_data):
     def initialize_sound():
         nonlocal sound_enabled, ambient_wind, turn_sfx, lose_sfx, milestone_raw
         if sound_enabled:
+            return
+        if sys.platform == 'emscripten':
+            import platform
+            class BrowserSound:
+                def __init__(self, name):
+                    self.name, self.volume = name, 1.0
+                def set_volume(self, volume):
+                    self.volume = volume
+                def play(self, loops=0):
+                    platform.window.slippySound(self.name, 'play', self.volume)
+                def fadeout(self, milliseconds):
+                    platform.window.slippySound(self.name, 'stop', self.volume)
+            ambient_wind = BrowserSound('wind')
+            turn_sfx = BrowserSound('turn')
+            lose_sfx = BrowserSound('lose')
+            milestone_raw = BrowserSound('milestone')
+            ambient_wind.set_volume(.3)
+            ambient_wind.play()
+            sound_enabled = True
             return
         try:
             if not pygame.mixer.get_init():
@@ -472,6 +495,9 @@ async def main(path_gid, active_tile_data):
                         ax, ay = map_to_screen_anchor(x, y, z)
                         render_tiles.append(((x + y, z), ax, ay, image))
     render_tiles.sort(key=lambda tile: tile[0])
+    tile_rows = {}
+    for tile in render_tiles:
+        tile_rows.setdefault(int(tile[2] // 128), []).append(tile)
     touch_start = None
     running = True
     while running:
@@ -594,7 +620,11 @@ async def main(path_gid, active_tile_data):
         screen_rect = screen.get_rect()
         cull_buffer = max(TILE_WIDTH_PX, TILE_HEIGHT_PX) * 1.5
         visible_screen_rect_cull = screen_rect.inflate(cull_buffer, cull_buffer)
-        for _, anchor_x_raw, anchor_y_raw, image in render_tiles:
+        visible_tiles = []
+        for row in range(int((camera_y - cull_buffer) // 128), int((camera_y + SCREEN_HEIGHT + cull_buffer) // 128) + 1):
+            visible_tiles.extend(tile_rows.get(row, ()))
+        visible_tiles.sort(key=lambda tile: tile[0])
+        for _, anchor_x_raw, anchor_y_raw, image in visible_tiles:
             final_anchor_x = anchor_x_raw - camera_x
             final_anchor_y = anchor_y_raw - camera_y
             if visible_screen_rect_cull.collidepoint(final_anchor_x, final_anchor_y):
