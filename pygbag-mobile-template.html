@@ -219,7 +219,10 @@ async def custom_site():
             platform.document.getElementById("status").style.fontSize = "18px"
             print(f"mobile game error: {exc!r}")
 
-    asyncio.create_task(run_game())
+    # This is a normal Pygame application, not an interactive REPL. Running
+    # the coroutine directly lets its frame-yielding loop drive Safari's
+    # canvas without waiting for the template's terminal loop.
+    await run_game()
 
     for k,v in vars(game_main).items():
         if not k.startswith('_'):
