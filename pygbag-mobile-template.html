@@ -212,8 +212,11 @@ async def custom_site():
             await game_main.game_loop()
         except Exception as exc:
             # Keep failures visible on iOS instead of leaving a blank shell.
-            platform.document.getElementById("status").innerText = f"Game error: {exc}"
+            error_text = f"Game error: {exc}"
+            platform.window.transfer.hidden = False
+            platform.document.getElementById("status").innerText = error_text
             platform.document.getElementById("status").style.color = "white"
+            platform.document.getElementById("status").style.fontSize = "18px"
             print(f"mobile game error: {exc!r}")
 
     asyncio.create_task(run_game())
