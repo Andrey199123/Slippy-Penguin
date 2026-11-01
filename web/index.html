@@ -55,6 +55,9 @@ async def custom_site():
         ios_device = bool(platform.window.__slippyIOS)
     except Exception:
         ios_device = False
+    # Use the mobile runtime for this browser build. The JS controls already
+    # handle desktop input, while Safari needs the mounted mobile filesystem.
+    ios_device = True
 
     if ios_device:
         # This is the official Pygbag mobile startup order. Safari needs the
