@@ -1,5 +1,12 @@
 // Installed before Pygbag so Python, WASM, package and game downloads count.
 (() => {
+  const unlockAudio = () => {
+    const context = window.SDL2?.audioContext || window.Module?.SDL2?.audioContext;
+    if (context && context.state === 'suspended') context.resume().catch(console.warn);
+  };
+  document.addEventListener('touchstart', unlockAudio, {passive: true});
+  document.addEventListener('pointerdown', unlockAudio, {passive: true});
+  document.addEventListener('keydown', unlockAudio);
   const originalFetch = window.fetch.bind(window);
   const state = window.slippyLoading = { bytes: 0, progress: 0, stage: 'Downloading Python and Pygame' };
   const paint = () => {

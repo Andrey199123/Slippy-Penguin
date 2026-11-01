@@ -407,7 +407,8 @@ async def main(path_gid, active_tile_data):
             sound_enabled = False
 
     # Desktop can initialize immediately; browsers retry this after a gesture.
-    initialize_sound()
+    if sys.platform != 'emscripten':
+        initialize_sound()
     milestone_count = 0
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption(f"{WINDOW_TITLE}")
@@ -458,12 +459,38 @@ async def main(path_gid, active_tile_data):
     camera_x = initial_anchor_x_raw - SCREEN_WIDTH * CAMERA_TARGET_SCREEN_X_FRAC
     camera_y = initial_anchor_y_raw - SCREEN_HEIGHT * CAMERA_TARGET_SCREEN_Y_FRAC
 
+    # Cache static tile geometry and images once instead of traversing every
+    # map cell and resolving every image on each mobile frame.
+    render_tiles = []
+    for layer in tiled_map.visible_layers:
+        if isinstance(layer, pytmx.TiledTileLayer):
+            z = layer.properties.get('z_level', 0)
+            for x, y, gid in layer.iter_data():
+                if gid:
+                    image = tiled_map.get_tile_image_by_gid(gid)
+                    if image:
+                        ax, ay = map_to_screen_anchor(x, y, z)
+                        render_tiles.append(((x + y, z), ax, ay, image))
+    render_tiles.sort(key=lambda tile: tile[0])
+    touch_start = None
     running = True
     while running:
-        dt = clock.tick(FPS) / 1000.0
+        dt = min(clock.tick(0 if sys.platform == 'emscripten' else FPS) / 1000.0, 0.05)
         if dt == 0:
+            await asyncio.sleep(0)
             continue
         for event in pygame.event.get():
+            if event.type == pygame.FINGERDOWN:
+                touch_start = (event.x, event.y)
+                if game_state == 'game_over':
+                    lose_sound_already_played = False
+                    return True
+            elif event.type == pygame.FINGERUP and touch_start is not None:
+                dx, dy = event.x - touch_start[0], event.y - touch_start[1]
+                touch_start = None
+                if max(abs(dx), abs(dy)) > 0.025:
+                    key = (pygame.K_RIGHT if dx > 0 else pygame.K_LEFT) if abs(dx) > abs(dy) else (pygame.K_DOWN if dy > 0 else pygame.K_UP)
+                    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=key))
             if event.type == pygame.QUIT:
                 return False
             if event.type in (
@@ -567,7 +594,12 @@ async def main(path_gid, active_tile_data):
         screen_rect = screen.get_rect()
         cull_buffer = max(TILE_WIDTH_PX, TILE_HEIGHT_PX) * 1.5
         visible_screen_rect_cull = screen_rect.inflate(cull_buffer, cull_buffer)
-        for layer in tiled_map.visible_layers:
+        for _, anchor_x_raw, anchor_y_raw, image in render_tiles:
+            final_anchor_x = anchor_x_raw - camera_x
+            final_anchor_y = anchor_y_raw - camera_y
+            if visible_screen_rect_cull.collidepoint(final_anchor_x, final_anchor_y):
+                screen.blit(image, (final_anchor_x - TILE_WIDTH_PX / 2, final_anchor_y - TILE_HEIGHT_PX))
+        for layer in ():  # Static map rendering is handled by the cache above.
             if isinstance(layer, pytmx.TiledTileLayer):
                 map_z = layer.properties.get('z_level', 0)
                 for map_x, map_y, gid in layer.iter_data():
