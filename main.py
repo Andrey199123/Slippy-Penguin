@@ -377,24 +377,33 @@ def draw_text(surface, text, size, x, y, color, align="center"):
 async def main(path_gid, active_tile_data):
     global lose_sound_already_played
 
-    # SOUND INITIALIZATION
-    sound_enabled = True
-    try:
-        pygame.mixer.init()
-        ambient_wind = pygame.mixer.Sound("assets/wind.ogg")
-        turn_sfx = pygame.mixer.Sound("assets/turn.ogg")
-        lose_sfx = pygame.mixer.Sound("assets/lose.ogg")
-        milestone_raw = pygame.mixer.Sound("assets/milestone.ogg")
-        ambient_wind.set_volume(0.30)
-        ambient_wind.play(loops=-1)
-    except pygame.error:
-        # Audio can be unavailable until browser interaction enables it.
-        sound_enabled = False
-        ambient_wind = turn_sfx = lose_sfx = milestone_raw = None
+    # Sound may be blocked by browser autoplay policy until a user gesture.
+    sound_enabled = False
+    ambient_wind = turn_sfx = lose_sfx = milestone_raw = None
 
-    milestone_count = 0
     pygame.init()
     pygame.font.init()
+
+    def initialize_sound():
+        nonlocal sound_enabled, ambient_wind, turn_sfx, lose_sfx, milestone_raw
+        if sound_enabled:
+            return
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+            ambient_wind = pygame.mixer.Sound("assets/wind.ogg")
+            turn_sfx = pygame.mixer.Sound("assets/turn.ogg")
+            lose_sfx = pygame.mixer.Sound("assets/lose.ogg")
+            milestone_raw = pygame.mixer.Sound("assets/milestone.ogg")
+            ambient_wind.set_volume(0.30)
+            ambient_wind.play(loops=-1)
+            sound_enabled = True
+        except pygame.error:
+            sound_enabled = False
+
+    # Desktop can initialize immediately; browsers retry this after a gesture.
+    initialize_sound()
+    milestone_count = 0
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption(f"{WINDOW_TITLE}")
     clock = pygame.time.Clock()
@@ -452,6 +461,12 @@ async def main(path_gid, active_tile_data):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
+            if event.type in (
+                pygame.MOUSEBUTTONDOWN,
+                pygame.KEYDOWN,
+                getattr(pygame, "FINGERDOWN", -1),
+            ):
+                initialize_sound()
             if event.type == pygame.KEYDOWN:
                 if game_state == "game_over":
                     if event.key == pygame.K_r:
